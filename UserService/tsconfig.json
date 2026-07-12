@@ -16,6 +16,5 @@
     "prisma",
     "src/**/*.ts",
     "src/**/*.d.ts",
-    "prisma"
   ]
 }

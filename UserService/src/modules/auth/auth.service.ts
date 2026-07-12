@@ -72,7 +72,7 @@ export class AuthService {
   //#region Send OTP
   async sendOTP(firstName: string, lastName: string, password: string, email: string) {
     const user = await this.repository.findByEmail(email);
-    console.log("User found:--------", user);
+
     if (user) {
       throw new AppError(
         USER_MESSAGES.USER_ALREADY_EXISTS,
@@ -94,7 +94,7 @@ export class AuthService {
     const {otp , otpSessionId} = await generateAndStoreOTP(payload);
 
     //Send the OTP to the user via email or SMS
-    await sendOTPEmail(email, otp);
+    await sendOTPEmail(email, parseInt(otp));
 
 
     return {otpSessionId};
