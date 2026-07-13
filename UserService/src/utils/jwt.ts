@@ -1,16 +1,8 @@
-import { FastifyInstance } from "fastify";
+// import Fastify from "fastify";
+// import jwtPlugin from "./plugins/jwt";
 
-export function generateAccessToken(
-  app: FastifyInstance,
-  payload: {
-    id: string;
-    email: string;
-    role: string;
-  }
-) {
-  return app.jwt.sign({
-    sub: payload.id,
-    email: payload.email,
-    role: payload.role,
-  });
-}
+// const app = Fastify();
+
+// await app.register(jwtPlugin);
+
+// export default app;

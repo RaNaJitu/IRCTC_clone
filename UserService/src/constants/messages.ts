@@ -12,6 +12,8 @@ export const AUTH_MESSAGES = {
   MISSING_FIELDS: "Missing required fields",
 
   UNAUTHORIZED: "Unauthorized",
+
+  MISSING_REFRESH_TOKEN : "Missing refresh Token"
 } as const;
 
 export const USER_MESSAGES = {

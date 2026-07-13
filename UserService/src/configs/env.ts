@@ -9,7 +9,6 @@ const envSchema = z.object({
     .default("development"),
 
   HOST: z.string().default("0.0.0.0"),
-  
   PORT: z.coerce.number().default(3000),
 
   DATABASE_URL: z.string(),
@@ -21,14 +20,20 @@ const envSchema = z.object({
 
   JWT_ACCESS_EXPIRES: z.string().default("15m"),
   JWT_REFRESH_EXPIRES: z.string().default("7d"),
+  JWT_ACCESS_EXPIRES_IN_SECONDS: z.coerce.number().default(900),
+  JWT_REFRESH_EXPIRES_IN_SECONDS: z.coerce.number().default(604800),
 
   REDIS_URL : z.string(),
+  REDIS_USER_TTL: z.coerce.number().default(86400),
+
   SENDGRID_API_KEY : z.string(),
   OTP_TTL : z.coerce.number().default(300), // 300 second = 5 mint
   EMAIL_SEND : z.string(),
   OTP_MAX_PER_HOUR: z.coerce.number().default(5),
   OTP_MAX_VERIFIED_ATTEMPTS: z.coerce.number().default(5),
-  HMAC_SECRET: z.string().min(10)
+  HMAC_SECRET: z.string().min(10),
+
+  
 });
 
 export const env = envSchema.parse(process.env);

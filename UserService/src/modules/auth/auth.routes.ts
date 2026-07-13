@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from "fastify";
 
-import { login, logout, me, refreshToken, register, SEND_OTP, VERIFY_OTP } from "./auth.controller";
+import { LOGIN, login, logout, me, refreshToken, register, ROTATE_REFRESH_TOKEN, SEND_OTP, VERIFY_OTP } from "./auth.controller";
 import { authenticate } from "../../middlewares/auth.middleware";
 import { verifyOTP } from "../../utils/otp";
 
@@ -58,7 +58,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-    login
+    // login
+    LOGIN
   );
 
   fastify.get(
@@ -101,6 +102,16 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     refreshToken
   );
 
+fastify.get(
+    "/refresh",
+    {
+      schema: {
+        tags: ["Authentication"],
+        summary: "Refresh access token",
+      },
+    },
+    ROTATE_REFRESH_TOKEN
+  );
 /**
  * 1. Access Token
  * 2. Authenticate User 

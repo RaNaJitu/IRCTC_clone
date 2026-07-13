@@ -17,7 +17,7 @@ export class FastifyTokenService implements ITokenService {
         sub: payload.id,
         email: payload.email,
         role: payload.role,
-        sessionId: payload.sessionId,
+        deviceId: payload.sessionId,
       },
       {
         expiresIn: env.JWT_ACCESS_EXPIRES,
@@ -40,7 +40,7 @@ export class FastifyTokenService implements ITokenService {
   ): Promise<string> {
     return this.app.jwt.sign(
       {
-        sessionId: payload.sessionId,
+        deviceId: payload.sessionId,
         userId: payload.userId,
         // sessionId: payload.sessionId,
         // userId: payload.userId,

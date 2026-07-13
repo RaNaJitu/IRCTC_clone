@@ -15,6 +15,7 @@ import { LOGGER } from "../../configs/logger";
 import { AppError } from "../../exceptions/app-error";
 import { HTTP_STATUS } from "../../constants/status-codes";
 import { env } from "../../configs/env";
+import { generateDeviceFingerprint } from "../../utils/deviceFingerprint";
 
 const authService = new AuthService();
 
@@ -53,9 +54,9 @@ export async function login(
       LoginSchema.parse(request.body);
 
   const user =
-      await authService.login(
+      await authService.login_v1(
           body.email,
-          body.password
+          body.password,
       );
 
   const result = await request.server.container.loginService.execute({
@@ -72,7 +73,71 @@ export async function login(
       {
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
-        user: toUserResponse(user),
+        user
+        // user: toUserResponse(user),
+      }
+    )
+  );
+}
+//#endregion
+
+//#region Login for IRCTC
+export async function LOGIN(
+    request: FastifyRequest<{
+    Body: {
+      email: string;
+      password: string;
+    };
+  }>,
+    reply: FastifyReply
+) {
+
+  const body =
+      LoginSchema.parse(request.body);
+
+  LOGGER.info("Login Body:--->", body);
+
+  if (!body.email || !body.password) {
+    throw new AppError(
+      AUTH_MESSAGES.MISSING_FIELDS,
+      HTTP_STATUS.BAD_REQUEST
+    );
+  }
+
+  const deviceId = generateDeviceFingerprint(request);
+  console.log("login devicedId", deviceId)
+
+  const { user, accessToken, refreshToken } =
+      await authService.login(
+          request.server,
+          body.email,
+          body.password,
+          deviceId
+      );
+
+  reply.cookie("access_token", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: env.JWT_ACCESS_EXPIRES_IN_SECONDS * 1000,
+    path: "/",
+  });
+
+  reply.cookie("refresh_token", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: env.JWT_REFRESH_EXPIRES_IN_SECONDS * 1000,
+    path: "/",
+  });
+
+  return reply.send(
+    successResponse(
+      AUTH_MESSAGES.LOGIN_SUCCESS,
+      {
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        user,
       }
     )
   );
@@ -251,3 +316,48 @@ export async function VERIFY_OTP(
   );
 }
 //#endregion
+
+
+//#region Rotate Refresh Token
+export async function ROTATE_REFRESH_TOKEN(
+  request: FastifyRequest,
+  reply: FastifyReply
+){
+
+  const refreshToken = request.cookies.refresh_token
+
+  if(!refreshToken){
+      throw new AppError(
+      AUTH_MESSAGES.MISSING_REFRESH_TOKEN,
+      HTTP_STATUS.BAD_REQUEST
+    );
+  }
+
+  const deviceId = generateDeviceFingerprint(request);
+
+
+  const { newAccessToken, newRefreshToken } = await authService.rotateRefreshToken(request.server,refreshToken, deviceId)
+
+  reply.cookie("access_token", newAccessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: env.JWT_ACCESS_EXPIRES_IN_SECONDS * 1000,
+    path: "/",
+  });
+
+  reply.cookie("refresh_token", newRefreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: env.JWT_REFRESH_EXPIRES_IN_SECONDS * 1000,
+    path: "/",
+  });
+
+
+  return reply.send(
+    successResponse(
+      "Access And Refresh Token Reissue",
+    )
+  );
+}
