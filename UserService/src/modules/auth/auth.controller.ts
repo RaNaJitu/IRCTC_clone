@@ -16,6 +16,7 @@ import { AppError } from "../../exceptions/app-error";
 import { HTTP_STATUS } from "../../constants/status-codes";
 import { env } from "../../configs/env";
 import { generateDeviceFingerprint } from "../../utils/deviceFingerprint";
+import redis from "../../configs/redis";
 
 const authService = new AuthService();
 
@@ -361,3 +362,49 @@ export async function ROTATE_REFRESH_TOKEN(
     )
   );
 }
+//#endregion
+
+//#region google OAuth2.0
+export async function VERIFY_GOOGLE_TOKEN(
+  request: FastifyRequest<{
+    Body:{
+      idToken:string
+    }
+  }>, 
+  reply: FastifyReply
+){
+  const { idToken } = request.body
+
+  if(!idToken){
+    throw new AppError(
+      "Invalid Google Token, INVALID TOKEN",
+      HTTP_STATUS.BAD_REQUEST
+    )
+  }
+  const deviceId = generateDeviceFingerprint(request);
+  const { accessToken, refreshToken } = await authService.verifyGoogleToken(request.server, idToken, deviceId)
+
+  reply.cookie("access_token", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: env.JWT_ACCESS_EXPIRES_IN_SECONDS * 1000,
+    path: "/",
+  });
+
+  reply.cookie("refresh_token", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: env.JWT_REFRESH_EXPIRES_IN_SECONDS * 1000,
+    path: "/",
+  });
+
+
+  
+  return { accessToken, refreshToken }
+}
+//#endregion
+
+
+

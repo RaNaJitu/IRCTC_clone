@@ -33,7 +33,7 @@ const envSchema = z.object({
   OTP_MAX_VERIFIED_ATTEMPTS: z.coerce.number().default(5),
   HMAC_SECRET: z.string().min(10),
 
-  
+  GOOGLE_CLIENT_ID: z.string()
 });
 
 export const env = envSchema.parse(process.env);

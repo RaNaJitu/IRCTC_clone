@@ -14,9 +14,14 @@ import { ITokenService } from "../auth/interfaces/token.interface";
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../../utils/auth";
 import { env } from "../../configs/env";
 import { FastifyInstance } from "fastify";
+import { OAuth2Client } from "google-auth-library";
+import { ProviderRepository } from "../user/provider.repository";
+import { prisma } from "../../configs/prisma";
 
 export class AuthService {
   private repository = new UserRepository();
+  private providerRepository = new ProviderRepository();
+  private client = new OAuth2Client(env.GOOGLE_CLIENT_ID)
   // private sessionService = new SessionService();
   // private readonly tokenService = tokenService();
 
@@ -181,6 +186,7 @@ export class AuthService {
   }
   //#endregion
 
+  //#region Rotate Refresh Token
   async rotateRefreshToken(app: FastifyInstance, refreshToken: string, deviceId: string){
     const payload: any = await verifyRefreshToken(app, refreshToken)
     const { userId, jti } = payload
@@ -215,7 +221,120 @@ export class AuthService {
 
     return {newAccessToken, newRefreshToken}
   }
+  //#endregion
+
+
+
+  //region Google Verify
+  async verifyGoogleToken(app: FastifyInstance, token: string, deviceId: string){
+    const ticket = await this.client.verifyIdToken({idToken: token, audience: env.GOOGLE_CLIENT_ID})
+    const payload : any= ticket.getPayload()
+
+    if(!payload.sub || !payload?.email){
+      throw new AppError(
+        AUTH_MESSAGES.UNAUTHORIZED,
+        HTTP_STATUS.UNAUTHORIZED
+      )
+    }
+    const googleUser = { 
+      provider: payload.iss,
+      providerId: payload.sub,
+      email:payload.email,
+      firstName: payload.given_name,
+      lastName: payload.family_name,
+      emailVerified: payload.email_verified || false
+    }
+
+    //check google email has in the our Auth Provide table if No then check the User table thet email
+    //has already exite then link to the google 
+    // if YES  then return the user details
+    //check that google user has first time signin if yes then create user and provider table
+
+    const user = await prisma.$transaction(async(tx)=>{
+
+      const googleAuth:  authProvider | null = await tx.authProvider.findUnique({
+        where:{
+          provider_providerId:{
+            provider: googleUser.provider,
+            providerId: googleUser.providerId
+          }
+        },
+        include:{
+          user: true
+        }
+      })
+
+      if(googleAuth) return googleAuth.user
+
+      let existsUser: any = tx.user.findUnique({
+        where: {
+          id: googleUser.email
+        }
+      })
+
+      if(existsUser){
+        tx.authProvider.create({
+          data:{
+            provider: googleUser.provider,
+            providerId: googleUser.providerId,
+            userId: existsUser.id,
+          }
+        })
+        return existsUser
+      }
+      return await tx.user.create({
+        data: {
+          firstName: googleUser.firstName,
+          lastName: googleUser.lastName,
+          email: googleUser.email,
+          password: "",
+          AuthProvider: {
+            create:{
+              provider: googleUser.provider,
+              providerId: googleUser.providerId,
+            }
+          }
+        }
+      })
+
+    })
+
+    const accessToken = await generateAccessToken(app, user)
+
+    const refreshToken = await generateRefreshToken(app, user)
+
+    const { jti } = app.jwt.decode(refreshToken) as { jti: string };
+    console.log(jti)
+
+    // Store the refresh token in Redis with the jti as the key
+    await redis.set(`refresh:${user.id}: device:${deviceId}`, jti, "EX", env.JWT_REFRESH_EXPIRES_IN_SECONDS); // Set expiration to 7 days
+
+    const { password: _password, ...safeUser } = user;
+
+    await redis.set(`user:${user.id}`, JSON.stringify(safeUser), "EX", env.REDIS_USER_TTL); // Cache user data for 24 hours 
+
+    return { accessToken, refreshToken }
+  }
+  //#endregion
+
+
 }
 
 
+type user ={
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  password?: string;
+}
+type authProvider = { 
+  userId: string;
+  provider: string;
+  providerId: string;
+  user: user
+}
 

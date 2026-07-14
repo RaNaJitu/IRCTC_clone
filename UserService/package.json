@@ -32,6 +32,7 @@
     "dotenv": "^17.4.2",
     "fastify": "^5.9.0",
     "fastify-plugin": "^6.0.0",
+    "google-auth-library": "^10.9.0",
     "ioredis": "^5.11.1",
     "otp-generator": "^4.0.1",
     "winston": "^3.19.0",
