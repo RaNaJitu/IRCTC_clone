@@ -2,14 +2,14 @@ name: IRCTC-Project
 
 on:
   push:
-    branch:
+    branchs:
       - main
 
-job:
+jobs:
  deploy:
-  run-on: ubuntu-latest
+  runs-on: ubuntu-latest
 
-  step:
+  steps:
     - name: Checkout Code
       uses: actions/checkout@v4
 
@@ -20,6 +20,17 @@ job:
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.SSH_KEY}}
         script: |
-          cd 
-          git pull
-          docker compose up -d --build
+            cd /home/${{ secrets.USERNAME }}
+
+            # Clone the repository if it doesn't exist
+            if [ ! -d "IRCTC_clone" ]; then
+              git clone https://github.com/RaNaJitu/IRCTC_clone.git
+            fi
+
+            cd IRCTC_clone
+
+            # Pull the latest code
+            git pull origin main
+
+            # Build and restart containers
+            docker compose up -d --build
