@@ -18,6 +18,7 @@ const router = express.Router();
 
 const userServiceProxy = createProxy('userService', config.SERVICES.USER_SERVICE_URL);
 
+//#region User Services Routes
 // public routes
 router.post(
      '/users/auth/send-otp',
@@ -72,7 +73,10 @@ router.delete(
 )
 
 const adminServiceProxy = createProxy('adminService', config.SERVICES.ADMIN_SERVICE_URL);
+//#endregion
 
+
+//#region Admins related Routes
 router.post(
      '/admins/stations/station',
      requireAuth,
@@ -121,9 +125,14 @@ router.put(
      combinedRateLimit(),
      adminServiceProxy
 )
+//#endregion
+
+
+//#region search Related Routes
 // ===========================
 // SEARCH SERVICE ROUTES (public - no auth required)
 // ===========================
+
 const searchServiceProxy = createProxy('searchService', config.SERVICES.SEARCH_SERVICE_URL);
 
 router.get(
@@ -137,7 +146,10 @@ router.get(
      endpointRateLimit(120, 60000), // 120 requests per minute
      searchServiceProxy
 );
+//#endregion
 
+
+//#region Invenrory 
 // ===========================
 // INVENTORY SERVICE ROUTES (public read-only)
 // ===========================
@@ -157,7 +169,10 @@ router.get(
      combinedRateLimit(),
      inventoryServiceProxy
 );
+//#endregion
 
+
+//#region Booking Routes
 // Note: lock/unlock/confirm/cancel-booking are now internal-only
 // (called by booking-service directly, not through the gateway)
 
@@ -200,7 +215,10 @@ router.post(
      combinedRateLimit(),
      bookingServiceProxy
 );
+//#endregion
 
+
+//#region Payment Routes
 // ===========================
 // PAYMENT SERVICE ROUTES (webhook only - public)
 // ===========================
@@ -211,6 +229,8 @@ router.post(
      '/payments/webhooks/razorpay',
      paymentServiceProxy
 );
+//#endregion
+
 
 // Gateway Health Status
 
@@ -229,5 +249,6 @@ router.get('/gateway/circuit-breakers', (req, res) => {
           circuitBreakers: status,
      });
 });
+
 
 module.exports = router;
