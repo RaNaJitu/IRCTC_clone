@@ -1,0 +1,25 @@
+name: IRCTC-Project
+
+on:
+  push:
+    branch:
+      - main
+
+job:
+ deploy:
+  run-on: ubuntu-latest
+
+  step:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: deploy To Main(PROD)
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{secrets.SSH_HOST}}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_KEY}}
+        script: |
+          cd 
+          git pull
+          docker compose up -d --build
